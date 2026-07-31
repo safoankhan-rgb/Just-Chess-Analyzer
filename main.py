@@ -8,6 +8,8 @@ import random
 import pathlib
 import pandas as pd
 import altair as alt
+import os
+import requests
 
 st.set_page_config(
     layout="wide",
@@ -54,58 +56,91 @@ def classify_move(score_change, is_capture=False, moved_piece=None):
         else:
             return "Blunder", "red"
 
-def analyze_game(game, engine_path, depth):
-    engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+def get_stockfish_path(custom_path=None):
+    """Use existing local Stockfish or fallback to default path"""
+    if custom_path and pathlib.Path(custom_path).exists():
+        return custom_path
+    
+    # Try existing local Stockfish first
+    existing_paths = [
+        "stockfish/stockfish/stockfish-ubuntu-x86-64-sse41-popcnt",
+        "stockfish_binary/stockfish-ubuntu-x86-64-modern",
+        "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt",
+    ]
+    
+    for path in existing_paths:
+        if pathlib.Path(path).exists():
+            return path
+    
+    # Return default path for user to configure
+    return "stockfish/stockfish/stockfish-ubuntu-x86-64-sse41-popcnt"
+
+def analyze_game(game, depth, engine_path=None):
+    engine_path = get_stockfish_path(engine_path)
+    if not engine_path:
+        return []
+    
+    try:
+        engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    except Exception as e:
+        st.error(f"Stockfish initialization error: {str(e)}")
+        return []
+    
     analysis_results = []
     board = game.board()
 
     previous_eval = None
 
     for move_index, move in enumerate(game.mainline_moves()):
-        is_capture = board.is_capture(move)
+        try:
+            is_capture = board.is_capture(move)
 
-        from_square = move.from_square
-        moved_piece = board.piece_type_at(from_square)
+            from_square = move.from_square
+            moved_piece = board.piece_type_at(from_square)
 
-        current_position = board.copy()
+            current_position = board.copy()
 
-        board.push(move)
+            board.push(move)
 
-        side_to_move = not board.turn
+            side_to_move = not board.turn
 
-        info = engine.analyse(board, chess.engine.Limit(depth=depth))
-        current_eval = info["score"].white().score(mate_score=10000)
+            info = engine.analyse(board, chess.engine.Limit(depth=depth))
+            current_eval = info["score"].white().score(mate_score=10000)
 
-        if previous_eval is None:
-            score_change = 0
-        else:
-            if side_to_move:  # White just moved
-                score_change = previous_eval - current_eval
-            else:  # Black just moved
-                score_change = current_eval - previous_eval
+            if previous_eval is None:
+                score_change = 0
+            else:
+                if side_to_move:  # White just moved
+                    score_change = previous_eval - current_eval
+                else:  # Black just moved
+                    score_change = current_eval - previous_eval
 
-            score_change = abs(score_change)
+                score_change = abs(score_change)
 
-        previous_eval = current_eval
+            previous_eval = current_eval
 
-        win_probability = 1 / (1 + 10 ** (-current_eval / 400))
+            win_probability = 1 / (1 + 10 ** (-current_eval / 400))
 
-        move_quality, color = classify_move(score_change, is_capture, moved_piece)
+            move_quality, color = classify_move(score_change, is_capture, moved_piece)
 
-        best_move_info = engine.analyse(current_position, chess.engine.Limit(depth=depth))
-        best_move = best_move_info.get("pv", [None])[0]
+            best_move_info = engine.analyse(current_position, chess.engine.Limit(depth=depth))
+            pv = best_move_info.get("pv", [])
+            best_move = pv[0] if pv else None
 
-        analysis_results.append({
-            "move": move.uci(),
-            "score": round(win_probability, 3),
-            "centipawn_eval": current_eval,
-            "best_move": best_move.uci() if best_move else "None",
-            "score_change": round(score_change, 1),
-            "quality": move_quality,
-            "color": color,
-            "is_capture": is_capture,
-            "piece_moved": chess.piece_name(moved_piece) if moved_piece else "None",
-        })
+            analysis_results.append({
+                "move": move.uci(),
+                "score": round(win_probability, 3),
+                "centipawn_eval": current_eval,
+                "best_move": best_move.uci() if best_move else "None",
+                "score_change": round(score_change, 1),
+                "quality": move_quality,
+                "color": color,
+                "is_capture": is_capture,
+                "piece_moved": chess.piece_name(moved_piece) if moved_piece else "None",
+            })
+        except Exception as e:
+            st.error(f"Error analyzing move {move_index + 1}: {str(e)}")
+            continue
 
     engine.quit()
     return analysis_results
@@ -117,7 +152,7 @@ def main():
     with open(file_path) as f:
         st.html(f"<style>{f.read()}</style>")
 
-    st.title(":material/chess_pawn: Chess Game Analyzer")
+    st.title(":material/chess_pawn: Just Chess Analyzer")
 
     st.markdown("<hr style='margin: 0px 0px 30px 0px;'>", unsafe_allow_html=True)
 
@@ -130,13 +165,18 @@ def main():
         with st.container(border=True):
             engine_path = st.text_input(
                 ":material/conversion_path: Stockfish Engine Path",
-                value="stockfish/stockfish",
+                value="stockfish/stockfish/stockfish-ubuntu-x86-64-sse41-popcnt",
                 help="Paste your Stockfish engine path here."
             )
 
         with st.container(border=True):
             pgn_file = st.file_uploader(":material/upload: Upload PGN file", type="pgn")
-            pgn_text = st.text_area(":material/content_paste: Or paste PGN text here")
+            pgn_text = st.text_area(
+                ":material/content_paste: Or paste PGN text here",
+                height=200,
+                key="pgn_input",
+                placeholder="Paste your PGN game here..."
+            )
 
         with st.container(border=True):
             # Depth selection with cheeky phrases
@@ -180,23 +220,15 @@ def main():
                     ]
                     with st.spinner(random.choice(messages)):
                         st.session_state.analysis = analyze_game(
-                            game, engine_path, depth
+                            game, depth, engine_path
                         )
                         st.session_state.num_moves = len(st.session_state.analysis)
 
             if "analysis" in st.session_state:
-                with st.container(border=True):
-                    st.write("Tap ꞏ and then use ← and → keys to navigate")
-                    slider = (
-                        st.slider(
-                            "Tap ꞏ and then use ← and → keys to navigate",
-                            1,
-                            st.session_state.num_moves,
-                            1,
-                            label_visibility="collapsed",
-                        )
-                        - 1
-                    )
+                if "current_move" not in st.session_state:
+                    st.session_state.current_move = 0
+
+                slider = st.session_state.current_move
                 board = game.board()
                 for i in range(slider + 1):
                     board.push(
@@ -204,7 +236,29 @@ def main():
                     )
 
                 with st.container(border=True):
-                    col2, col3 = st.columns(2, vertical_alignment="center", gap="small")
+                    col1, col2, col3 = st.columns([1, 2, 1], vertical_alignment="center", gap="small")
+
+                    with col1:
+                        with st.container(border=True, height=400):
+                            st.markdown("**Move Chart**")
+                            moves_per_row = 3
+                            for i in range(0, len(st.session_state.analysis), moves_per_row):
+                                cols = st.columns(moves_per_row)
+                                for j in range(moves_per_row):
+                                    idx = i + j
+                                    if idx < len(st.session_state.analysis):
+                                        move_data = st.session_state.analysis[idx]
+                                        eval_score = move_data["centipawn_eval"]
+                                        eval_str = f"+{eval_score/100:.1f}" if eval_score > 0 else f"{eval_score/100:.1f}"
+                                        
+                                        with cols[j]:
+                                            if st.button(
+                                                f"{idx+1}. {move_data['move']}\n{eval_str}",
+                                                key=f"move_{idx}",
+                                                use_container_width=True,
+                                                help=f"Quality: {move_data['quality']}"
+                                            ):
+                                                st.session_state.current_move = idx
 
                     with col2:
                         with st.container(border=True):
@@ -212,8 +266,25 @@ def main():
                                 st.write(
                                     f"{game.headers['Black']} ({game.headers['BlackElo']})"
                                 )
-                            svg = chess.svg.board(board=board, size=400)
+                            if st.session_state.get("show_best_move", False) and st.session_state.analysis[slider]["best_move"] != "None":
+                                best_move = chess.Move.from_uci(st.session_state.analysis[slider]["best_move"])
+                                svg = chess.svg.board(board=board, size=400, arrows=[(best_move.from_square, best_move.to_square)])
+                            else:
+                                svg = chess.svg.board(board=board, size=400)
                             st.image(svg, width=800)
+                            btn1, btn2, btn3, btn4 = st.columns([1, 1, 1, 1])
+                            with btn1:
+                                if st.button("|<", key="first", use_container_width=True):
+                                    st.session_state.current_move = 0
+                            with btn2:
+                                if st.button("<", key="prev", use_container_width=True):
+                                    st.session_state.current_move = max(0, st.session_state.current_move - 1)
+                            with btn3:
+                                if st.button(">", key="next", use_container_width=True):
+                                    st.session_state.current_move = min(st.session_state.num_moves - 1, st.session_state.current_move + 1)
+                            with btn4:
+                                if st.button(">|", key="last", use_container_width=True):
+                                    st.session_state.current_move = st.session_state.num_moves - 1
                             with st.container(border=True):
                                 st.write(
                                     f"{game.headers['White']} ({game.headers['WhiteElo']})"
@@ -235,42 +306,8 @@ def main():
                                 f"- **Move Quality**: <span style='color:{result['color']}; font-weight:bold;'>{result['quality']}</span>",
                                 unsafe_allow_html=True,
                             )
-                            # st.markdown(f"- **Expected Points Lost**: `{result['expected_points_lost']:.3f}`")
-                            with st.container(border=True):
-                                # Win Probability Chart with Brush Selection
-                                win_prob_data = pd.DataFrame(
-                                    {
-                                        "Move Number": range(
-                                            1, len(st.session_state.analysis) + 1
-                                        ),
-                                        "Win Probability": [
-                                            x["score"]
-                                            for x in st.session_state.analysis
-                                        ],
-                                    }
-                                )
-
-                                brush = alt.selection_interval(encodings=["x"])
-
-                                win_prob_chart = (
-                                    alt.Chart(win_prob_data)
-                                    .mark_line()
-                                    .encode(
-                                        x=alt.X("Move Number:Q", title="Move Number"),
-                                        y=alt.Y(
-                                            "Win Probability:Q", title="Win Probability"
-                                        ),  # Removed format="%"`
-                                        tooltip=["Move Number", "Win Probability"],
-                                    )
-                                    .properties(
-                                        title="Win Probability of White Over Time"
-                                    )
-                                    .add_selection(brush)
-                                )
-
-                                st.altair_chart(
-                                    win_prob_chart, use_container_width=True
-                                )
+                            if st.button("Show Best Move on Board", key="show_best", use_container_width=True):
+                                st.session_state.show_best_move = not st.session_state.get("show_best_move", False)
 
         except Exception as e:
             st.error(f"Error analyzing game: {str(e)}")
