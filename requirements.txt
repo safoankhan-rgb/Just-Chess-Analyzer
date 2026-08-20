@@ -1,6 +1,5 @@
 streamlit
-chess
 python-chess
-altair==4.2.2
-pandas
-requests
+cairosvg
+Pillow
+imageio
