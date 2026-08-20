@@ -133,6 +133,8 @@ mv /path/to/your/book.bin opening_books/varied.bin
 
 ## 🚀 Usage
 
+### Local Development
+
 1. Start the application:
 
 ```bash
@@ -152,6 +154,38 @@ streamlit run main.py
    - Move quality assessment
    - Win probability graph
    - Best move suggestions
+
+### Docker Deployment
+
+#### Using Docker Compose (Recommended)
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Access the app at http://localhost:8501
+```
+
+#### Using Docker Directly
+
+```bash
+# Build the Docker image
+docker build -t chess-analyzer .
+
+# Run the container
+docker run -p 8501:8501 chess-analyzer
+
+# Access the app at http://localhost:8501
+```
+
+### Hugging Face Spaces Deployment
+
+1. Create a new Space on [Hugging Face](https://huggingface.co/spaces)
+2. Choose "Docker" as the Space type
+3. Push your code to the Space repository
+4. The app will automatically deploy with Stockfish included
+
+**Note**: The Dockerfile automatically downloads and configures Stockfish, so no manual setup is needed for containerized deployments.
 
 ## 📊 Analysis Metrics
 

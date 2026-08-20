@@ -155,8 +155,9 @@ def get_stockfish_path(custom_path=None):
     if custom_path and pathlib.Path(custom_path).exists():
         return custom_path
     
-    # Try existing local Stockfish first
+    # Try existing local Stockfish first (container path first for Docker)
     existing_paths = [
+        "stockfish/stockfish",  # Docker container path
         "stockfish/stockfish/stockfish-ubuntu-x86-64-sse41-popcnt",
         "stockfish_binary/stockfish-ubuntu-x86-64-modern",
         "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt",

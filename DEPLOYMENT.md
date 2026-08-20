@@ -1,91 +1,120 @@
 # Deployment Guide for Chess Analyzer
 
-## Option 1: Streamlit Cloud (Easiest - Free Tier)
+## Docker-Based Deployment (Recommended)
 
-### Prerequisites
+This project now includes Docker support for easy deployment with Stockfish binary included.
+
+### Local Docker Testing
+
+#### Using Docker Compose (Recommended)
+```bash
+docker-compose up --build
+```
+Access at http://localhost:8501
+
+#### Using Docker Directly
+```bash
+docker build -t chess-analyzer .
+docker run -p 8501:8501 chess-analyzer
+```
+
+### Option 1: Hugging Face Spaces (Free - Recommended)
+
+#### Prerequisites
 - GitHub account with your code pushed
-- Stockfish binary issue needs resolution (see below)
+- Stockfish binary included in repository
 
-### Steps
-1. Go to [share.streamlit.io](https://share.streamlit.io)
-2. Click "New app"
-3. Connect your GitHub repository
-4. Select `main.py` as main file
-5. Click "Deploy"
+#### Steps
+1. Go to [huggingface.co/spaces](https://huggingface.co/spaces)
+2. Create new Space
+3. Select "Docker" as the Space type
+4. Connect your GitHub repository
+5. The Dockerfile will automatically build with Stockfish included
+6. Deploy
 
-### Stockfish Binary Issue
-Streamlit Cloud doesn't support custom binaries well. You have two options:
+#### Why Hugging Face Spaces?
+- Free hosting for ML/chess projects
+- Full Docker support with custom binaries
+- Simple Git-based deployment
+- Good for public projects
 
-#### Option A: Use Chess API (Recommended)
-Replace local Stockfish with a cloud API. This is the most reliable solution.
+### Option 2: Railway (Supports Docker)
 
-#### Option B: Use Railway/Render (Supports Binaries)
-These platforms support custom binaries and can run Stockfish.
-
-## Option 2: Railway (Supports Stockfish Binary)
-
-### Steps
+#### Steps
 1. Go to [railway.app](https://railway.app)
 2. Click "New Project"
 3. Connect GitHub repository
-4. Railway will detect it's a Python project
-5. Add environment variable for Stockfish path if needed
-6. Deploy
+4. Railway will detect Docker setup
+5. Deploy automatically
 
-### Configuration
-Railway automatically handles the build process. Make sure your `requirements.txt` is complete.
+#### Configuration
+Railway automatically handles the Docker build process. Stockfish binary is included in the container.
 
-## Option 3: Render (Supports Stockfish Binary)
+### Option 3: Render (Supports Docker)
 
-### Steps
+#### Steps
 1. Go to [render.com](https://render.com)
 2. Click "New +"
 3. Select "Web Service"
 4. Connect GitHub repository
 5. Configure:
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `streamlit run main.py --server.port=$PORT --server.address=0.0.0.0`
+   - Runtime: Docker
+   - Render will use your Dockerfile
 6. Deploy
 
-## Option 4: Hugging Face Spaces (Free)
+### Option 4: Streamlit Cloud (Limited Support)
 
-### Steps
-1. Go to [huggingface.co/spaces](https://huggingface.co/spaces)
-2. Create new Space
-3. Select "Streamlit" SDK
-4. Upload your files or connect GitHub
-5. Deploy
+**Note**: Streamlit Cloud has limited support for custom binaries. Docker-based deployment is recommended instead.
 
-### Note
-Hugging Face Spaces may have limitations with Stockfish binary.
+If you still want to use Streamlit Cloud, you would need to:
+1. Use a cloud chess API instead of local Stockfish
+2. Or use a platform that supports Docker containers
 
 ## Important Notes
 
-### Stockfish Binary Path
-The app expects Stockfish at specific paths. For cloud deployment, you may need to:
-1. Upload the Stockfish binary to your repository
-2. Update the path in the code or settings
-3. Or use a chess API instead
+### Stockfish Binary
+The Dockerfile automatically includes the Stockfish binary in the container, so no manual setup is needed for Docker deployments.
 
 ### Environment Variables
-Consider adding environment variables for:
-- Stockfish path
-- API keys (if using chess API)
-- Other configuration
+The Docker container sets these automatically:
+- `STREAMLIT_SERVER_PORT=8501`
+- `STREAMLIT_SERVER_ADDRESS=0.0.0.0`
+- `PYTHONUNBUFFERED=1`
 
 ### Custom Domain
 Once deployed, you can add a custom domain through your platform's settings.
 
 ## Monitoring
-- Streamlit Cloud: Built-in metrics
+- Hugging Face Spaces: Basic metrics and logs
 - Railway: Built-in logs and metrics
 - Render: Built-in monitoring
-- Hugging Face: Basic metrics
+- Docker: Use `docker logs` for local monitoring
 
 ## Scaling
 - Free tiers have resource limits
 - Upgrade to paid plans for:
-  - More CPU/RAM
-  - Better performance
+  - More CPU/RAM for faster analysis
+  - Better performance with deep analysis
   - Custom domains
   - Priority support
+
+## Troubleshooting
+
+### Docker Build Issues
+- Ensure Docker is running: `docker ps`
+- Check available disk space
+- Try `docker system prune` to clean up
+
+### Stockfish Not Found in Container
+- Verify the binary was copied correctly in Dockerfile
+- Check file permissions: `RUN chmod +x stockfish/stockfish`
+- Test locally first with `docker run`
+
+### Port Already in Use
+- Change port mapping: `docker run -p 8502:8501 chess-analyzer`
+- Or stop conflicting services
+
+### Memory Issues
+- Deep analysis (depth 30+) requires more RAM
+- Consider reducing depth for free tier deployments
+- Upgrade to paid tier for better performance
