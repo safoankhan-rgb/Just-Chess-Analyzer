@@ -1,6 +1,8 @@
 # Use Python 3.10 slim image
 FROM python:3.10-slim
 
+# Stockfish binary now properly included via LFS
+
 # Set working directory
 WORKDIR /app
 
