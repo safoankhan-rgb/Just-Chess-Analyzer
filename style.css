@@ -12,3 +12,61 @@
 .st-key-agame button:hover {
   background: linear-gradient(to bottom right, #00f0ff, #0e6fff, #8f5bff);
 }
+
+/* Dark mode styles */
+[data-theme="dark"] {
+  --st-background-color: #0e1117;
+  --st-text-color: #fafafa;
+  --st-border-color: #262730;
+}
+
+[data-theme="dark"] .stApp {
+  background-color: #0e1117;
+}
+
+[data-theme="dark"] [data-testid="stSidebar"] {
+  background-color: #1a1d24;
+}
+
+[data-theme="dark"] [data-testid="stContainer"] {
+  background-color: #0e1117;
+}
+
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: #fafafa;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] div {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] [data-testid="stVerticalBlockBorder"] {
+  border-color: #262730;
+}
+
+[data-theme="dark"] [data-testid="stButton"] {
+  background-color: #1a1d24;
+  border-color: #262730;
+}
+
+[data-theme="dark"] [data-testid="stTextInput"] > div > div > input {
+  background-color: #1a1d24;
+  color: #fafafa;
+}
+
+[data-theme="dark"] [data-testid="stTextArea"] > div > div > textarea {
+  background-color: #1a1d24;
+  color: #fafafa;
+}
+
+[data-theme="dark"] [data-testid="stSelectbox"] > div > div {
+  background-color: #1a1d24;
+  color: #fafafa;
+}

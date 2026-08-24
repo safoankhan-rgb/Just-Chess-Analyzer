@@ -702,6 +702,18 @@ def main():
     file_path = pathlib.Path("style.css")
     with open(file_path) as f:
         st.html(f"<style>{f.read()}</style>")
+    
+    # Initialize dark mode in session state
+    if "dark_mode" not in st.session_state:
+        st.session_state.dark_mode = False
+    
+    # Apply dark mode theme
+    theme = "dark" if st.session_state.dark_mode else "light"
+    st.html(f"""
+    <script>
+        document.body.setAttribute('data-theme', '{theme}');
+    </script>
+    """)
 
     st.title(":material/chess_pawn: Just Chess Analyzer")
 
@@ -735,6 +747,13 @@ def main():
                 key="pgn_input",
                 placeholder="Paste your PGN game here..."
             )
+
+        with st.container(border=True):
+            # Dark mode toggle
+            dark_mode = st.toggle(":material/dark_mode: Dark Mode", value=st.session_state.dark_mode, key="dark_mode_toggle")
+            if dark_mode != st.session_state.dark_mode:
+                st.session_state.dark_mode = dark_mode
+                st.rerun()
 
         with st.container(border=True):
             # Depth selection with cheeky phrases
@@ -958,14 +977,18 @@ def main():
                         with st.container(border=True):
                             black_name = game.headers.get('Black', 'Unknown')
                             black_elo = game.headers.get('BlackElo', '?')
-                            st.write(f"{black_name} ({black_elo})")
+                            st.markdown(
+                                f"<span style='display:inline-block; width:12px; height:12px; background-color:black; border-radius:50%; margin-right:8px; border:1px solid #333;'></span>{black_name} ({black_elo})",
+                                unsafe_allow_html=True
+                            )
                     
                     with col2:
                         with st.container(border=True):
                             white_name = game.headers.get('White', 'Unknown')
                             white_elo = game.headers.get('WhiteElo', '?')
-                            st.write(
-                                f"{white_name} ({white_elo})"
+                            st.markdown(
+                                f"<span style='display:inline-block; width:12px; height:12px; background-color:white; border-radius:50%; margin-right:8px; border:1px solid #ccc;'></span>{white_name} ({white_elo})",
+                                unsafe_allow_html=True
                             )
 
         except Exception as e:
