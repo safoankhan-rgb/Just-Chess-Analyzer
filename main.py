@@ -742,14 +742,33 @@ def main():
 
         with st.container(border=True):
             # Dark mode toggle
-            dark_mode = st.toggle(":material/dark_mode: Dark Mode", value=st.session_state.dark_mode, key="dark_mode_toggle")
+            dark_mode = st.toggle(
+                ":material/dark_mode: Dark Mode",
+                value=st.session_state.dark_mode,
+                key="dark_mode_toggle"
+            )
             if dark_mode != st.session_state.dark_mode:
                 st.session_state.dark_mode = dark_mode
-                if dark_mode:
-                    st._config.set_option("theme.base", "dark")
-                else:
-                    st._config.set_option("theme.base", "light")
                 st.rerun()
+
+            # Force the correct theme attribute on every run
+            theme = "dark" if st.session_state.dark_mode else "light"
+            st.markdown(
+                f"""
+                <script>
+                    // Set theme on the root elements
+                    const root = window.parent.document.querySelector('html') || document.documentElement;
+                    root.setAttribute('data-theme', '{theme}');
+                    
+                    // Also set on body and app container for maximum compatibility
+                    document.body.setAttribute('data-theme', '{theme}');
+                    const app = window.parent.document.querySelector('[data-testid="stApp"]') || 
+                               document.querySelector('[data-testid="stApp"]');
+                    if (app) app.setAttribute('data-theme', '{theme}');
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
 
         with st.container(border=True):
             # Depth selection with cheeky phrases
