@@ -705,49 +705,7 @@ def main():
     
     # Initialize dark mode in session state
     if "dark_mode" not in st.session_state:
-        st.session_state.dark_mode = False
-    
-    # Apply dark mode theme using CSS injection
-    if st.session_state.dark_mode:
-        dark_mode_css = """
-        <style>
-        .stApp {
-            background-color: #0e1117 !important;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #1a1d24 !important;
-        }
-        [data-testid="stContainer"] {
-            background-color: #0e1117 !important;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            color: #fafafa !important;
-        }
-        p, span, div, label {
-            color: #e0e0e0 !important;
-        }
-        [data-testid="stVerticalBlockBorder"] {
-            border-color: #262730 !important;
-        }
-        [data-testid="stButton"] {
-            background-color: #1a1d24 !important;
-            border-color: #262730 !important;
-        }
-        [data-testid="stTextInput"] > div > div > input {
-            background-color: #1a1d24 !important;
-            color: #fafafa !important;
-        }
-        [data-testid="stTextArea"] > div > div > textarea {
-            background-color: #1a1d24 !important;
-            color: #fafafa !important;
-        }
-        [data-testid="stSelectbox"] > div > div {
-            background-color: #1a1d24 !important;
-            color: #fafafa !important;
-        }
-        </style>
-        """
-        st.html(dark_mode_css)
+        st.session_state.dark_mode = True
 
     st.title(":material/chess_pawn: Just Chess Analyzer")
 
@@ -787,6 +745,10 @@ def main():
             dark_mode = st.toggle(":material/dark_mode: Dark Mode", value=st.session_state.dark_mode, key="dark_mode_toggle")
             if dark_mode != st.session_state.dark_mode:
                 st.session_state.dark_mode = dark_mode
+                if dark_mode:
+                    st._config.set_option("theme.base", "dark")
+                else:
+                    st._config.set_option("theme.base", "light")
                 st.rerun()
 
         with st.container(border=True):
